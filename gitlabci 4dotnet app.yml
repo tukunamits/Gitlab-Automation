@@ -1,0 +1,37 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  BUILD_DIR: "build"
+  ARTIFACT_NAME: "myapp.zip"
+  IIS_APP_NAME: "myapp"
+
+cache:
+  paths:
+    - $BUILD_DIR/node_modules/
+    - $BUILD_DIR/bower_components/
+    - $BUILD_DIR/.tmp/
+    - $BUILD_DIR/dist/
+
+build:
+  stage: build
+  image: node:10
+  script:
+    - npm install
+    - bower install --allow-root
+    - gulp build
+    - cd $BUILD_DIR && zip -r $ARTIFACT_NAME *
+
+  artifacts:
+    paths:
+      - $BUILD_DIR/$ARTIFACT_NAME
+
+deploy:
+  stage: deploy
+  image: microsoft/iis:windowsservercore-ltsc2019
+  script:
+    - powershell -Command "Expand-Archive -Path $CI_PROJECT_DIR/$BUILD_DIR/$ARTIFACT_NAME -DestinationPath 'C:/inetpub/wwwroot/$IIS_APP_NAME'"
+  environment:
+    name: production
+    url: http://webapp.com/myapp
